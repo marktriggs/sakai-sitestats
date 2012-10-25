@@ -153,6 +153,14 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				" where EVENT_ID='user.login'" +
 				" group by 1";
 
+
+                String oracle = ("select TO_DATE(TO_CHAR(ACTIVITY_DATE, 'YYYY-MM-\"01\"'), 'YYYY-MM-DD') as period," +
+                    " sum(ACTIVITY_COUNT) as user_logins" +
+                    " from SST_SERVERSTATS" +
+                    " where EVENT_ID='user.login'" +
+                    " group by TO_DATE(TO_CHAR(ACTIVITY_DATE, 'YYYY-MM-\"01\"'), 'YYYY-MM-DD')");
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -184,6 +192,12 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				" count(distinct user_id) as unique_users" +
 				" from sst_userstats" +
 				" group by 1";
+
+                String oracle = ("select TO_DATE(TO_CHAR(LOGIN_DATE, 'YYYY-MM-\"01\"'),'YYYY-MM-DD') as period," +
+                    " count(distinct user_id) as unique_users" +
+                    " from sst_userstats" +
+                    " group by TO_DATE(TO_CHAR(LOGIN_DATE, 'YYYY-MM-\"01\"'),'YYYY-MM-DD')");
+
 
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
@@ -223,6 +237,13 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				" where EVENT_ID='user.login'" +
 				" group by 1";
 		
+                String oracle = ("select next_day(ACTIVITY_DATE - 7, 'MONDAY') as week_start," +
+                    " sum(ACTIVITY_COUNT) as user_logins" +
+                    " from SST_SERVERSTATS" +
+                    " where EVENT_ID='user.login'" +
+                    " group by next_day(ACTIVITY_DATE - 7, 'MONDAY')");
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -255,6 +276,12 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				" from sst_userstats" +
 				" group by 1";
 		
+                String oracle = ("select next_day(LOGIN_DATE - 7, 'MONDAY') as week_start," +
+                    " count(distinct user_id) as unique_users" +
+                    " from sst_userstats" +
+                    " group by next_day(LOGIN_DATE - 7, 'MONDAY')");
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -297,6 +324,15 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				" and ACTIVITY_DATE > DATE_SUB(CURDATE(), INTERVAL 90 DAY)" +
 				" group by 1";
 		
+                String oracle = ("select trunc(ACTIVITY_DATE, 'DDD') as session_date," +
+                    " sum(ACTIVITY_COUNT) as user_logins" +
+                    " from SST_SERVERSTATS" +
+                    " where EVENT_ID='user.login' " +
+                    " and ACTIVITY_DATE > (SYSDATE - 90)" +
+                    " group by trunc(ACTIVITY_DATE, 'DDD')");
+
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -330,6 +366,13 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				" where LOGIN_DATE > DATE_SUB(CURDATE(), INTERVAL 90 DAY)" +
 				" group by 1";
 		
+                String oracle = ("select trunc(LOGIN_DATE, 'DDD') as session_date, " +
+                    " count(distinct user_id) as unique_users" +
+                    " from sst_userstats" +
+                    " where LOGIN_DATE > (SYSDATE - 90)" +
+                    " group by trunc(LOGIN_DATE, 'DDD')");
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -352,6 +395,32 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 	}
 
 	public List<ServerWideStatsRecord> getSiteCreatedDeletedStats(String period) {
+
+          /*    // Oracle equivalent
+
+		String sqlPeriod = "";
+		if (period.equals ("daily")) {
+			sqlPeriod = "trunc(ACTIVITY_DATE, 'DDD') as event_period";
+		} else if (period.equals ("weekly")) {
+			sqlPeriod = "next_day(ACTIVITY_DATE - 7, 'MONDAY') event_period";
+		} else {
+			// monthly
+			sqlPeriod = "TO_DATE(TO_CHAR(ACTIVITY_DATE, 'YYYY-MM-\"01\"'),'YYYY-MM-DD') as event_period";
+		}
+		String oracle = "select " + sqlPeriod + ", "
+				+ "sum(decode(EVENT_ID, 'site.add',1,0)) as site_created, "
+				+ "sum(decode(EVENT_ID, 'site.del',1,0)) as site_deleted "
+				+ "FROM SST_SERVERSTATS ";
+		
+		if (period.equals ("daily")) {
+			oracle = oracle + "where ACTIVITY_DATE > (SYSDATE - 90) ";
+		}
+		
+		oracle = oracle + "group by " + sqlPeriod;
+
+           */
+
+
 		String sqlPeriod = "";
 		if (period.equals ("daily")) {
 			sqlPeriod = "date(ACTIVITY_DATE) as event_period";
@@ -395,6 +464,32 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 
 	public List<ServerWideStatsRecord> getNewUserStats(String period)
 	{
+          /*
+                // Oracle version
+
+
+		String sqlPeriod = "";
+		if (period.equals ("daily")) {
+			sqlPeriod = "trunc(ACTIVITY_DATE, 'DDD') as event_period";
+		} else if (period.equals ("weekly")) {
+			sqlPeriod = "next_day(ACTIVITY_DATE - 7, 'MONDAY') as event_period";
+		} else {
+			// monthly
+			sqlPeriod = "TO_DATE(TO_CHAR(ACTIVITY_DATE, 'YYYY-MM-\"01\"'),'YYYY-MM-DD') as event_period";
+		}
+		String oracle = "select " + sqlPeriod + ", "
+				+ " ACTIVITY_COUNT as new_user"
+				+ " FROM SST_SERVERSTATS"
+				+ " where EVENT_ID='user.add'";
+				
+
+		if (period.equals ("daily")) {
+			oracle = oracle + " AND ACTIVITY_DATE > (SYSDATE - 90) ";
+		}
+		oracle = oracle + " group by " + sqlPeriod;
+          */
+
+
 		String sqlPeriod = "";
 		if (period.equals ("daily")) {
 			sqlPeriod = "date(ACTIVITY_DATE) as event_period";
@@ -451,6 +546,21 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				+ "group by 1 " + "order by 2 desc, 3 desc, 4 desc "
 				+ "LIMIT 20";
 
+
+                String oracle = ("select * from" +
+                    " (SELECT event_id," +
+                    " sum(decode(sign(event_date - (SYSDATE - 7)), 1, 1, 0)) / 7 as last7," +
+                    " sum(decode(sign(event_date - (SYSDATE - 30)), 1, 1, 0)) / 30 as last30," +
+                    " sum(decode(sign(event_date - (SYSDATE - 365)), 1, 1, 0)) / 365 as last365" +
+                    " FROM SST_EVENTS" +
+                    " where event_id not in ('content.read', 'user.login', 'user.logout', 'pres.begin', 'pres.end', 'realm.upd', 'realm.add', 'realm.del', 'realm.upd.own', 'site.add', 'site.del', 'user.add', 'user.del')" +
+                    " and event_date > (SYSDATE - 365)" +
+                    " group by event_id" +
+                    " order by last7 desc, last30 desc, last365 desc)" +
+                    " where rownum <= 20");
+
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -482,6 +592,19 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				+ "STR_TO_DATE(concat(date_format(login_date, '%x-%v'), ' Monday'),'%x-%v %W') as week_start, "
 				+ "user_id, login_count as user_logins "
 				+ "from SST_USERSTATS group by 1, 2) as s " + "group by 1";
+
+                String oracle = ("select s.week_start," +
+                    " sum(decode(sign(s.user_logins - 4), 1, 1, 0)) as five_plus," +
+                    " sum(decode(s.user_logins, 4, 1, 0)) as four, " +
+                    " sum(decode(s.user_logins, 3, 1, 0)) as three, " +
+                    " sum(decode(s.user_logins, 2, 1, 0)) as twice, " +
+                    " sum(decode(s.user_logins, 1, 1, 0)) as once" +
+                    " from (select next_day(LOGIN_DATE - 7, 'MONDAY') as week_start," +
+                    "       user_id, login_count as user_logins" +
+                    "       from SST_USERSTATS" +
+                    "       group by next_day(LOGIN_DATE - 7, 'MONDAY'), user_id, login_count) s" +
+                    " group by s.week_start");
+
 
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
@@ -519,6 +642,14 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				+ "where SESSION_START > DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
 				+ "group by 1, 2";
 
+                String oracle = ("select trunc(SESSION_START, 'DDD') as session_date," +
+                    " to_number(to_char(session_start, 'HH24')) as hour_start," +
+                    " count(distinct SESSION_USER) as unique_users" +
+                    " from SAKAI_SESSION" +
+                    " where SESSION_START > (SYSDATE - 30)" +
+                    " group by trunc(SESSION_START, 'DDD'), to_number(to_char(session_start, 'HH24'))");
+
+
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
 			{
@@ -545,6 +676,14 @@ public class ServerWideReportManagerImpl implements ServerWideReportManager
 				"where site_id not like '~%' and site_id not like '!%' " +
 				"group by 1 " +
 				"order by 2 desc";
+
+
+                String oracle = ("SELECT registration, count(*) as site_count" +
+                    " FROM SAKAI_SITE_TOOL" +
+                    " where site_id not like '~%' and site_id not like '!%'" +
+                    " group by registration" +
+                    " order by site_count desc");
+
 
 		List result = m_sqlService.dbRead (mySql, null, new SqlReader () {
 			public Object readSqlResultRecord (ResultSet result)
