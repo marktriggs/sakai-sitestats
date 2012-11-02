@@ -199,3 +199,76 @@ from SAKAI_EVENT
 where EVENT ='user.del'
 and EVENT_DATE > DATE_SUB(CURDATE(), INTERVAL 5000 DAY) group by 1;
 
+
+
+########################################
+Historical data conversion (for Oracle)
+########################################
+
+This section contains Oracle versions of the SQL statements from the previous section.
+
+
+### Convert daily total user logins
+insert into sst_serverstats (id, activity_date, event_id, activity_count) 
+select sst_serverstats_id.nextval, sub.*
+from (select trunc(SESSION_START, 'DDD') as session_date, 'user.login', count(*)
+      from SAKAI_SESSION where SESSION_START > (SYSDATE - 5000)
+      group by trunc(SESSION_START, 'DDD')) sub;
+
+
+
+### Convert daily individual user logins
+insert into sst_userstats (id, login_date, user_id, login_count) 
+select sst_userstats_id.nextval, sub.*
+from (select trunc(SESSION_START, 'DDD'), SESSION_USER, count(*)
+      from SAKAI_SESSION
+      where SESSION_START > (SYSDATE - 5000)
+      group by SESSION_USER, trunc(SESSION_START, 'DDD')) sub;
+
+
+
+### Convert the daily site.add server events per day
+insert into sst_serverstats (id, activity_date, event_id, activity_count) 
+select sst_serverstats_id.nextval, sub.*
+from (select trunc(EVENT_DATE, 'DDD'), event, count(*) as event_id
+      from SAKAI_EVENT
+      where EVENT = 'site.add'
+      and REF not like '/site/~%'
+      and REF not like '/site/!%'
+      and EVENT_DATE > (SYSDATE - 5000)
+      group by trunc(EVENT_DATE, 'DDD'), event) sub;
+
+
+
+### Convert the daily site.del server events per day
+insert into sst_serverstats (id, activity_date, event_id, activity_count) 
+select sst_serverstats_id.nextval, sub.*
+from (select trunc(EVENT_DATE, 'DDD'), event, count(*) as event_id
+      from SAKAI_EVENT
+      where EVENT = 'site.del'
+      and REF not like '/site/~%'
+      and REF not like '/site/!%'
+      and EVENT_DATE > (SYSDATE - 5000)
+      group by trunc(EVENT_DATE, 'DDD'), event) sub;
+
+
+
+### Convert the daily user.add server events per day
+insert into sst_serverstats (id, activity_date, event_id, activity_count) 
+select sst_serverstats_id.nextval, sub.*
+from (select trunc(EVENT_DATE, 'DDD'), event, count(*) as event_id
+      from SAKAI_EVENT
+      where EVENT = 'user.add'
+      and EVENT_DATE > (SYSDATE - 5000)
+      group by trunc(EVENT_DATE, 'DDD'), event) sub;
+
+
+
+### Convert the daily user.del server events per day
+insert into sst_serverstats (id, activity_date, event_id, activity_count) 
+select sst_serverstats_id.nextval, sub.*
+from (select trunc(EVENT_DATE, 'DDD'), event, count(*) as event_id
+      from SAKAI_EVENT
+      where EVENT = 'user.del'
+      and EVENT_DATE > (SYSDATE - 5000)
+      group by trunc(EVENT_DATE, 'DDD'), event) sub;
